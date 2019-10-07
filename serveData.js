@@ -8,3 +8,8 @@ const byActive = not(hasExpired);
 // .filter(missingData) // we should fix these ones!
     // .filter(byExternalCustomer)
     // .filter(byActive)
+
+// next steps:
+// import to basic csv / make it visual
+// question: free devs?
+// question: next free devs?

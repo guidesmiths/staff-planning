@@ -6,8 +6,10 @@ require('dotenv').config();
 
 const Harvest = require('harvest-v2');
 const config = {
-  accountId: process.env.ACCOUNT_ID,
-  token: process.env.TOKEN,
+  harvest: {
+    accountId: process.env.ACCOUNT_ID,
+    token: process.env.TOKEN,
+  },
   db: {
 		url: process.env.MONGO_URL,
 		database: process.env.MONGO_DB || 'gs-planning-dev',
@@ -16,8 +18,8 @@ const config = {
 };
 
 const harvest = new Harvest({
-    account_ID: config.accountId,
-    access_token: config.token,
+    account_ID: config.harvest.accountId,
+    access_token: config.harvest.token,
     user_agent: 'Harvest API'
 });
 
@@ -112,14 +114,18 @@ const initDb = async () => {
 const start = async () => {
   const db = await initDb();
   const latest = await extractLatestData();
+  await db.collection('plans').deleteMany({});
   await db.collection('plans').insertMany(latest);
-  console.log('Plan caching completed!');
+  console.log('Plan cache refresh completed!');
   return Promise.resolve();
 };
 
-
-// next steps:
-// import to basic csv / make it visual
-// question: free devs?
-// question: next free devs?
-start();
+(async () => {
+  try {
+    await start();
+    process.exit(0);
+  } catch (e) {
+    console.error(e);
+    process.exit(1);
+  }
+})();
