@@ -57,8 +57,8 @@ const toSummary = project => ({
     name: project.name,
     code: project.code,
     budget: project.budget,
-    startDate: project.starts_on,
-    endDate: project.ends_on,
+    startDate: moment(project.starts_on).toDate(),
+    endDate: moment(project.ends_on).toDate(),
     client: project.client,
   }
 });
