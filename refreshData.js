@@ -72,8 +72,7 @@ const getProjectsById = async () => {
     .reduce(mergeProjects, {});
 };
 
-const getUserAssignments = async () => {
-  const users = await getUsers();
+const getUserAssignments = async (users) => {
   const usersById = users
   .filter(({ is_active }) => is_active)
   .reduce((total, user) => ({ ...total, [user.id]: { user, assignments: [] } }), {});
@@ -90,7 +89,8 @@ const getUserAssignments = async () => {
 
 const extractLatestData = async () => {
   const basicProjectInfoById = await getProjectsById();
-  const assignments = await getUserAssignments();
+  const users = await getUsers();
+  const assignments = await getUserAssignments(users);
 
   const assignmentsByProjectId = assignments.map(({ user, assignments }) => assignments
     .map(({ budget, hourlyRate, projectId }) => ({
@@ -99,7 +99,10 @@ const extractLatestData = async () => {
   const mergedAssignments = deepMerge.all(assignmentsByProjectId);
 
   const finalProjectInfo = deepMerge(basicProjectInfoById, mergedAssignments);
-  return Object.values(finalProjectInfo);
+  return {
+    users,
+    planning: Object.values(finalProjectInfo),
+  };
 };
 
 const initDb = async () => {
@@ -108,14 +111,18 @@ const initDb = async () => {
   debug('Configuring db....');
   db.collection('plans').createIndex({ 'project.id': 1 }, { unique: true });
   db.collection('plans').createIndex({ 'assignments.user.id': 1 });
+  db.collection('users').createIndex({ 'id': 1 });
+  db.collection('users').createIndex({ 'email': 1 }, { unique: true });
   return db;
 };
 
 const start = async () => {
   const db = await initDb();
-  const latest = await extractLatestData();
+  const { users, planning } = await extractLatestData();
   await db.collection('plans').deleteMany({});
-  await db.collection('plans').insertMany(latest);
+  await db.collection('plans').insertMany(planning);
+  await db.collection('users').deleteMany({});
+  await db.collection('users').insertMany(users);
   console.log('Plan cache refresh completed!');
   return Promise.resolve();
 };
