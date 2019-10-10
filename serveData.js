@@ -13,3 +13,13 @@ const byActive = not(hasExpired);
 // import to basic csv / make it visual
 // question: free devs?
 // question: next free devs?
+
+(async () => {
+    try {
+      await start();
+      process.exit(0);
+    } catch (e) {
+      console.error(e);
+      process.exit(1);
+    }
+  })();

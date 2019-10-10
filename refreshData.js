@@ -1,8 +1,8 @@
 const debug = require('debug')('planning');
 const moment = require('moment');
 const deepMerge = require('deepmerge');
-const { MongoClient } = require('mongodb');
 require('dotenv').config();
+const initDb = require('./db');
 
 const Harvest = require('harvest-v2');
 const config = {
@@ -105,24 +105,13 @@ const extractLatestData = async () => {
   };
 };
 
-const initDb = async () => {
-  const mongo = await MongoClient.connect(config.db.url, config.db.options);
-  const db = mongo.db(config.db.database);
-  debug('Configuring db....');
-  db.collection('plans').createIndex({ 'project.id': 1 }, { unique: true });
-  db.collection('plans').createIndex({ 'assignments.user.id': 1 });
-  db.collection('users').createIndex({ 'id': 1 });
-  db.collection('users').createIndex({ 'email': 1 }, { unique: true });
-  return db;
-};
-
 const start = async () => {
-  const db = await initDb();
+  const { insertManyPlans, insertManyUsers } = await initDb(config.db);
   const { users, planning } = await extractLatestData();
-  await db.collection('plans').deleteMany({});
-  await db.collection('plans').insertMany(planning);
-  await db.collection('users').deleteMany({});
-  await db.collection('users').insertMany(users);
+
+  await insertManyPlans(planning);
+  await insertManyUsers(users);
+
   console.log('Plan cache refresh completed!');
   return Promise.resolve();
 };
