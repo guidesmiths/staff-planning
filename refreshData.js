@@ -1,21 +1,9 @@
 const debug = require('debug')('planning');
 const moment = require('moment');
 const deepMerge = require('deepmerge');
-require('dotenv').config();
-const initDb = require('./db');
-
 const Harvest = require('harvest-v2');
-const config = {
-  harvest: {
-    accountId: process.env.ACCOUNT_ID,
-    token: process.env.TOKEN,
-  },
-  db: {
-		url: process.env.MONGO_URL,
-		database: process.env.MONGO_DB || 'gs-planning-dev',
-		options: { useNewUrlParser: true, useUnifiedTopology: true },
-	}
-};
+const initDb = require('./db');
+const config = require('./config');
 
 const harvest = new Harvest({
     account_ID: config.harvest.accountId,

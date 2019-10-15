@@ -20,8 +20,20 @@ module.exports = async (config) => {
     await db.collection('users').insertMany(users);
   };
 
+  const getUsers = async () => {
+    const users = await db.collection('users').find({});
+    return users.toArray();
+  };
+
+  const getPlans = async () => {
+    const plans = await db.collection('plans').find({});
+    return plans.toArray();
+  };
+
   return {
     insertManyPlans,
     insertManyUsers,
+    getUsers,
+    getPlans,
   }
 };
