@@ -1,3 +1,5 @@
+const jsonexport = require('jsonexport');
+const { writeFileSync } = require('fs');
 const debug = require('debug')('serving');
 const initDb = require('./db');
 const config = require('./config');
@@ -61,9 +63,32 @@ const createPlanning = async () => {
     return calculateAvailability(userSummary, planSummary);
 };
 
+const flatten = (total, list) => total.concat(list);
+const earliest = (a, b) => moment(a.availability).isBefore(moment(b.availability));
+
+const format = (plan) => {
+    const [role] = plan.roles;
+    return plan.currentProjects.map(project => ({
+        project,
+        email: plan.email,
+        role,
+        category: plan.category,
+        availability: plan.availability,
+    }));
+};
+
+const toCSV = async (list) => new Promise((resolve, reject) => {
+    jsonexport(list, (err, csv) => {
+        if (err) return reject(err);
+        resolve(csv);
+    });
+});
+
 const start = async () => {
     const planning = await createPlanning();
-    console.log(JSON.stringify(planning));
+    const formatted = planning.map(format).reduce(flatten, []).sort(earliest);
+    const csv = await toCSV(formatted);
+    writeFileSync('output.csv', csv, 'utf8');
     console.log('Planning created!');
     return Promise.resolve();
 };

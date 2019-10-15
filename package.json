@@ -13,6 +13,7 @@
     "deepmerge": "^4.0.0",
     "dotenv": "^8.1.0",
     "harvest-v2": "^1.2.0",
+    "jsonexport": "^2.4.1",
     "moment": "^2.24.0",
     "mongodb": "^3.3.2"
   }
