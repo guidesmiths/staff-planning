@@ -1,9 +1,9 @@
 const jsonexport = require('jsonexport');
 const { writeFileSync } = require('fs');
 const debug = require('debug')('serving');
-const initDb = require('./db');
-const config = require('./config');
 const moment = require('moment');
+const initDb = require('../../db');
+const config = require('../../config');
 
 const not = fn => arg => !fn(arg);
 const hasExpired = project => moment(project.ends_on).isBefore(moment())

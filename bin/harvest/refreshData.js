@@ -2,8 +2,8 @@ const debug = require('debug')('planning');
 const moment = require('moment');
 const deepMerge = require('deepmerge');
 const Harvest = require('harvest-v2');
-const initDb = require('./db');
-const config = require('./config');
+const initDb = require('../../db');
+const config = require('../../config');
 
 const harvest = new Harvest({
     account_ID: config.harvest.accountId,
