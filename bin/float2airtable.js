@@ -1,3 +1,4 @@
+const debug = require('debug')('float2airtable');
 const Airtable = require('airtable');
 const moment = require('moment');
 const request = require('request-promise-native');
@@ -61,41 +62,47 @@ const explodeDates = record => record.months.map(month => ({
   Dedication: record.Dedication,
   Task: record.Task,
   Billable: record.Billable,
-  month
+  Month: month
 }));
 
 const currentYear = moment().format('YYYY');
 const flatten = (total, current) => current.concat(total);
-const byCurrentYear = ({ month }) => moment(month, MONTH_FORMAT).format('YYYY') === currentYear;
+const byCurrentYear = ({ Month }) => moment(Month, MONTH_FORMAT).format('YYYY') === currentYear;
 const isWeekend = date => {
   const day = date.weekday();
   return (day === 6) || (day === 0);
 };
 
 const toTimesheet = row => {
-  const monthDate = moment(row.month, MONTH_FORMAT);
+  const monthDate = moment(row.Month, MONTH_FORMAT);
   const daysInMonth = monthDate.daysInMonth();
   const days = [...Array(daysInMonth).keys()];
   const timesheets = days.reduce((total, day) => ({
     ...total,
-    [day + 1]: isWeekend(moment(`${day + 1}-${row.month}`, DATE_FORMAT)) ? 0: 8,
+    [day + 1]: isWeekend(moment(`${day + 1}-${row.Month}`, DATE_FORMAT)) ? 0: 8,
   }), {});
   return {
-    basic: { ...row, month: monthDate.format('MMMM') },
+    basic: { ...row, Month: monthDate.format('MMMM') },
     timesheets,
   };
 };
 
-const persist = async ({ basic, timesheets }) => new Promise((resolve, reject) => {
-  const base = Airtable.base(config.airtable.base);
-  base(config.airtable.namespace).create({
-    ...basic,
-    ...timesheets
-  }, (err, record) => {
-    if (err) return reject(err);
-    resolve(record);
+const airtable = (() => {
+  const persist = async ({ basic, timesheets }) => new Promise((resolve, reject) => {
+    const base = Airtable.base(config.airtable.base);
+    base(config.airtable.namespace).create({
+      ...basic,
+      ...timesheets
+    }, (err, record) => {
+      if (err) return reject(err);
+      debug(`Record persisted ${record.id}`);
+      resolve(record);
+    });
   });
-});
+  return {
+    persist
+  };
+})();
 
 (async () => {
   const floatRecords = [
@@ -128,6 +135,7 @@ const persist = async ({ basic, timesheets }) => new Promise((resolve, reject) =
   // const people = await float.getPeople();
   // const tasks = await float.getTasks();
 
+  debug('Processing float records...');
   const records = floatRecords
     .map(toMonthsInvolved)
     .map(explodeDates)
@@ -135,7 +143,15 @@ const persist = async ({ basic, timesheets }) => new Promise((resolve, reject) =
     .filter(byCurrentYear)
     .map(toTimesheet);
 
-  for (const record of records) {
-    await persist(record);
+  debug('About to persist records on airtable...');
+  try {
+    for (const record of records) {
+      await airtable.persist(record);
+    }
+  } catch (e) {
+    console.error(e);
+    process.exit(1);
   }
+
+  process.exit(0);
 })();
