@@ -11,6 +11,10 @@ module.exports = {
     key: process.env.AIRTABLE_KEY,
     base: process.env.AIRTABLE_BASE,
   },
+  float: {
+    url: 'https://api.float.com/v3',
+    token: process.env.FLOAT_TOKEN,
+  },
   db: {
 		url: process.env.MONGO_URL,
 		database: process.env.MONGO_DB || 'gs-planning-dev',

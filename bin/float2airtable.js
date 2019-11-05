@@ -1,5 +1,6 @@
 const Airtable = require('airtable');
 const moment = require('moment');
+const request = require('request-promise-native');
 const config = require('../config');
 
 Airtable.configure({
@@ -9,30 +10,28 @@ Airtable.configure({
 const DATE_FORMAT = 'DD-MM-YYYY';
 const MONTH_FORMAT = 'MM-YYYY';
 
-const floatRecords = [
-  {
-    Client: 'BBFC',
-    Project: 'YouRateIt',
-    Consultant: 'joseantonio.dorado@guidesmiths.com',
-    Type: 'Employee',
-    Dedication: 'Full Time',
-    Task: 'Backend development',
-    Billable: true,
-    StartDate: '01-10-2019',
-    EndDate: '31-12-2019',
-  },
-  {
-    Client: 'BBFC',
-    Project: 'YouRateIt',
-    Consultant: 'kevin.martinez@guidesmiths.com',
-    Type: 'Employee',
-    Dedication: 'Full Time',
-    Task: 'Front End development',
-    Billable: true,
-    StartDate: '01-10-2019',
-    EndDate: '31-12-2019',
-  },
-];
+const float = (() => {
+  const baseUrl = config.float.url;
+  const makeRequest = async (url) => {
+    const options = {
+      auth: {
+        bearer: config.float.token,
+      },
+      headers: {
+        'User-Agent': 'GuideSmiths data migration (hello@guidesmiths.com)'
+      }
+    };
+    const res = await request.get(url, options);
+    return res;
+  };
+
+  return {
+    getClients: makeRequest.bind(this, `${baseUrl}/clients`),
+    getProjects: makeRequest.bind(this, `${baseUrl}/projects`),
+    getPeople: makeRequest.bind(this, `${baseUrl}/people`),
+    getTasks: makeRequest.bind(this, `${baseUrl}/tasks`),
+  };
+})();
 
 const monthsInBetween = (from, to) => {
   const interim = moment(from, DATE_FORMAT).clone();
@@ -87,7 +86,7 @@ const toTimesheet = row => {
   };
 };
 
-const createRow = async ({ basic, timesheets }) => new Promise((resolve, reject) => {
+const persist = async ({ basic, timesheets }) => new Promise((resolve, reject) => {
   const base = Airtable.base(config.airtable.base);
   base(config.airtable.namespace).create({
     ...basic,
@@ -99,6 +98,36 @@ const createRow = async ({ basic, timesheets }) => new Promise((resolve, reject)
 });
 
 (async () => {
+  const floatRecords = [
+    {
+      Client: 'BBFC',
+      Project: 'YouRateIt',
+      Consultant: 'joseantonio.dorado@guidesmiths.com',
+      Type: 'Employee',
+      Dedication: 'Full Time',
+      Task: 'Backend development',
+      Billable: true,
+      StartDate: '01-10-2019',
+      EndDate: '31-12-2019',
+    },
+    {
+      Client: 'BBFC',
+      Project: 'YouRateIt',
+      Consultant: 'kevin.martinez@guidesmiths.com',
+      Type: 'Employee',
+      Dedication: 'Full Time',
+      Task: 'Front End development',
+      Billable: true,
+      StartDate: '01-10-2019',
+      EndDate: '31-12-2019',
+    },
+  ];
+
+  // const clients = await float.getClients();
+  // const projects = await float.getProjects();
+  // const people = await float.getPeople();
+  // const tasks = await float.getTasks();
+
   const records = floatRecords
     .map(toMonthsInvolved)
     .map(explodeDates)
@@ -107,6 +136,6 @@ const createRow = async ({ basic, timesheets }) => new Promise((resolve, reject)
     .map(toTimesheet);
 
   for (const record of records) {
-    await createRow(record);
+    await persist(record);
   }
 })();
