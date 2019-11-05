@@ -4,27 +4,33 @@ const moment = require('moment');
 const request = require('request-promise-native');
 const config = require('../config');
 
-Airtable.configure({
-  endpointUrl: config.airtable.url,
-  apiKey: config.airtable.key
-});
 const DATE_FORMAT = 'DD-MM-YYYY';
 const MONTH_FORMAT = 'MM-YYYY';
 
 const float = (() => {
   const baseUrl = config.float.url;
-  const makeRequest = async (url) => {
+  const makeRequest = async (url, page = 1, items = []) => {
+    const actualUrl = `${url}?page=${page}`;
     const options = {
       auth: {
         bearer: config.float.token,
       },
       headers: {
         'User-Agent': 'GuideSmiths data migration (hello@guidesmiths.com)'
+      },
+      transform: async (body, response) => {
+        debug(`Processing float url ${actualUrl} response...`);
+        const headers = response.headers;
+        const totalPageCount = parseInt(headers['x-pagination-page-count'], 10);
+        const currentPage = parseInt(headers['x-pagination-current-page'], 10);
+        debug(`Scanning page ${currentPage}/${totalPageCount} for url ${actualUrl}...`);
+        items.push(...JSON.parse(body));
+        if (totalPageCount === currentPage) return items;
+        await makeRequest(url, currentPage + 1, items);
       }
     };
-    debug(`Requesting float url ${url}...`);
-    const res = await request.get(url, options);
-    return JSON.parse(res);
+    await request.get(actualUrl, options);
+    return items;
   };
 
   return {
@@ -32,6 +38,27 @@ const float = (() => {
     getProjects: makeRequest.bind(this, `${baseUrl}/projects`),
     getPeople: makeRequest.bind(this, `${baseUrl}/people`),
     getTasks: makeRequest.bind(this, `${baseUrl}/tasks`),
+  };
+})();
+
+const airtable = (() => {
+  Airtable.configure({
+    endpointUrl: config.airtable.url,
+    apiKey: config.airtable.key
+  });
+  const persist = async ({ basic, timesheets }) => new Promise((resolve, reject) => {
+    const base = Airtable.base(config.airtable.base);
+    base(config.airtable.namespace).create({
+      ...basic,
+      ...timesheets
+    }, (err, record) => {
+      if (err) return reject(err);
+      debug(`Record persisted ${record.id}`);
+      resolve(record);
+    });
+  });
+  return {
+    persist
   };
 })();
 
@@ -45,8 +72,6 @@ const monthsInBetween = (from, to) => {
   }
   return timeValues;
 };
-
-const removeNulls = (item) => item;
 
 const toMonthsInvolved = record => {
   const { StartDate, EndDate } = record;
@@ -68,9 +93,8 @@ const explodeDates = record => record.months.map(month => ({
   Month: month
 }));
 
-const currentYear = moment().format('YYYY');
 const flatten = (total, current) => current.concat(total);
-const byCurrentYear = ({ Month }) => moment(Month, MONTH_FORMAT).format('YYYY') === currentYear;
+const byYear = year => ({ Month }) => moment(Month, MONTH_FORMAT).format('YYYY') === year;
 const isWeekend = date => {
   const day = date.weekday();
   return (day === 6) || (day === 0);
@@ -89,23 +113,6 @@ const toTimesheet = row => {
     timesheets,
   };
 };
-
-const airtable = (() => {
-  const persist = async ({ basic, timesheets }) => new Promise((resolve, reject) => {
-    const base = Airtable.base(config.airtable.base);
-    base(config.airtable.namespace).create({
-      ...basic,
-      ...timesheets
-    }, (err, record) => {
-      if (err) return reject(err);
-      debug(`Record persisted ${record.id}`);
-      resolve(record);
-    });
-  });
-  return {
-    persist
-  };
-})();
 
 const buildFloatRecords = async () => {
   const floatClients = await float.getClients();
@@ -133,12 +140,8 @@ const buildFloatRecords = async () => {
   }), {});
   const floatTasks = await float.getTasks();
   const floatRecords = floatTasks.map((task) => {
-    const { task_id, project_id, start_date, end_date, people_id, billable, name } = task;
+    const { project_id, start_date, end_date, people_id, billable, name } = task;
     const project = projects[`${project_id}`];
-    if (!project) {
-      console.log(`Task ${task_id} belongs to the project ${project_id} and it could not be found!`);
-      return null; // why does this happen?
-    }
     return {
       Client: project.client,
       Project: project.name,
@@ -158,11 +161,10 @@ const buildFloatRecords = async () => {
 
   debug('Processing float records...');
   const records = floatRecords
-    .filter(removeNulls)
     .map(toMonthsInvolved)
     .map(explodeDates)
     .reduce(flatten, [])
-    .filter(byCurrentYear)
+    .filter(byYear('2019'))
     .map(toTimesheet);
 
   console.log('About to persist records on airtable...');
