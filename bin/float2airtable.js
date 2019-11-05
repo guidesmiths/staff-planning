@@ -22,8 +22,9 @@ const float = (() => {
         'User-Agent': 'GuideSmiths data migration (hello@guidesmiths.com)'
       }
     };
+    debug(`Requesting float url ${url}...`);
     const res = await request.get(url, options);
-    return res;
+    return JSON.parse(res);
   };
 
   return {
@@ -44,6 +45,8 @@ const monthsInBetween = (from, to) => {
   }
   return timeValues;
 };
+
+const removeNulls = (item) => item;
 
 const toMonthsInvolved = record => {
   const { StartDate, EndDate } = record;
@@ -104,46 +107,65 @@ const airtable = (() => {
   };
 })();
 
-(async () => {
-  const floatRecords = [
-    {
-      Client: 'BBFC',
-      Project: 'YouRateIt',
-      Consultant: 'joseantonio.dorado@guidesmiths.com',
-      Type: 'Employee',
-      Dedication: 'Full Time',
-      Task: 'Backend development',
-      Billable: true,
-      StartDate: '01-10-2019',
-      EndDate: '31-12-2019',
-    },
-    {
-      Client: 'BBFC',
-      Project: 'YouRateIt',
-      Consultant: 'kevin.martinez@guidesmiths.com',
-      Type: 'Employee',
-      Dedication: 'Full Time',
-      Task: 'Front End development',
-      Billable: true,
-      StartDate: '01-10-2019',
-      EndDate: '31-12-2019',
-    },
-  ];
+const buildFloatRecords = async () => {
+  const floatClients = await float.getClients();
+  const clients = floatClients.reduce((total, { client_id, name }) => ({
+    ...total,
+    [client_id]: name,
+  }), {});
+  const floatProjects = await float.getProjects();
+  const projects = floatProjects.reduce((total, { project_id, name, client_id }) => ({
+    ...total,
+    [project_id]: {
+      client: clients[client_id],
+      name,
+    }
+  }), {});
+  const floatPeople = await float.getPeople();
+  const people = floatPeople.reduce((total, { people_id, email, employee_type, people_type_id, avatar_file }) => ({
+    ...total,
+    [people_id]: {
+      Consultant: email,
+      Type: people_type_id === 2 ? 'Contractor': 'Employee',
+      Dedication: employee_type === 1 ? 'Full Time': 'Part Time',
+      Avatar: avatar_file,
+    }
+  }), {});
+  const floatTasks = await float.getTasks();
+  const floatRecords = floatTasks.map((task) => {
+    const { task_id, project_id, start_date, end_date, people_id, billable, name } = task;
+    const project = projects[`${project_id}`];
+    if (!project) {
+      console.log(`Task ${task_id} belongs to the project ${project_id} and it could not be found!`);
+      return null; // why does this happen?
+    }
+    return {
+      Client: project.client,
+      Project: project.name,
+      ...people[people_id],
+      Task: name,
+      Billable: billable === 1,
+      StartDate: start_date,
+      EndDate: end_date,
+    };
+  });
+  return floatRecords;
+};
 
-  // const clients = await float.getClients();
-  // const projects = await float.getProjects();
-  // const people = await float.getPeople();
-  // const tasks = await float.getTasks();
+(async () => {
+  debug('Building float records...');
+  const floatRecords = await buildFloatRecords();
 
   debug('Processing float records...');
   const records = floatRecords
+    .filter(removeNulls)
     .map(toMonthsInvolved)
     .map(explodeDates)
     .reduce(flatten, [])
     .filter(byCurrentYear)
     .map(toTimesheet);
 
-  debug('About to persist records on airtable...');
+  console.log('About to persist records on airtable...');
   try {
     for (const record of records) {
       await airtable.persist(record);
