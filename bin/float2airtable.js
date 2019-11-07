@@ -39,6 +39,7 @@ const float = (() => {
     getProjects: makeRequest.bind(this, `${baseUrl}/projects`),
     getPeople: makeRequest.bind(this, `${baseUrl}/people`),
     getTasks: makeRequest.bind(this, `${baseUrl}/tasks`),
+    getAccounts: makeRequest.bind(this, `${baseUrl}/accounts`),
   };
 })();
 
@@ -131,14 +132,6 @@ const buildFloatRecords = async () => {
     ...total,
     [client_id]: name,
   }), {});
-  const floatProjects = await float.getProjects();
-  const projects = floatProjects.reduce((total, { project_id, name, client_id }) => ({
-    ...total,
-    [project_id]: {
-      client: clients[client_id],
-      name,
-    }
-  }), {});
   const floatPeople = await float.getPeople();
   const people = floatPeople.reduce((total, { people_id, email, employee_type, people_type_id, avatar_file, department }) => ({
     ...total,
@@ -150,6 +143,23 @@ const buildFloatRecords = async () => {
       Country: department.name,
     }
   }), {});
+  const floatAccounts = await float.getAccounts();
+  const accounts = floatAccounts.reduce((total, { account_id, name, email }) => ({
+    ...total,
+    [`${account_id}`]: {
+      name,
+      email,
+    }
+  }), {});
+  const floatProjects = await float.getProjects();
+  const projects = floatProjects.reduce((total, { project_id, name, project_manager, client_id }) => ({
+    ...total,
+    [project_id]: {
+      client: clients[client_id],
+      name,
+      manager: accounts[`${project_manager}`].email,
+    }
+  }), {});
   const floatTasks = await float.getTasks();
   const floatRecords = floatTasks.map((task) => {
     const { project_id, start_date, end_date, people_id, billable, name } = task;
@@ -157,6 +167,7 @@ const buildFloatRecords = async () => {
     return {
       Client: project.client,
       Project: project.name,
+      Manager: project.manager,
       ...people[people_id],
       Task: name,
       Billable: billable === 1,
