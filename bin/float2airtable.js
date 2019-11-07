@@ -83,16 +83,16 @@ const toMonthsInvolved = record => {
   };
 };
 
-const explodeDates = record => record.months.map(month => ({
-  Client: record.Client,
-  Project: record.Project,
-  Consultant: record.Consultant,
-  Type: record.Type,
-  Dedication: record.Dedication,
-  Task: record.Task,
-  Billable: record.Billable,
-  Month: month
-}));
+const explodeDates = record => record.months.map(month => {
+  const result = Object.assign({}, record);
+  delete result.StartDate;
+  delete result.EndDate;
+  delete result.months;
+  return {
+    ...result,
+    Month: month
+  };
+});
 
 const flatten = (total, current) => current.concat(total);
 const byYear = year => ({ Month }) => moment(Month, MONTH_YEAR_FORMAT).format('YYYY') === year;
@@ -140,13 +140,14 @@ const buildFloatRecords = async () => {
     }
   }), {});
   const floatPeople = await float.getPeople();
-  const people = floatPeople.reduce((total, { people_id, email, employee_type, people_type_id, avatar_file }) => ({
+  const people = floatPeople.reduce((total, { people_id, email, employee_type, people_type_id, avatar_file, department }) => ({
     ...total,
     [people_id]: {
       Consultant: email,
       Type: people_type_id === 2 ? 'Contractor': 'Employee',
       Dedication: employee_type === 1 ? 'Full Time': 'Part Time',
       Avatar: avatar_file,
+      Country: department.name,
     }
   }), {});
   const floatTasks = await float.getTasks();
