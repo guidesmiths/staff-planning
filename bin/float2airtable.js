@@ -75,6 +75,14 @@ const monthsInBetween = (from, to) => {
   return timeValues;
 };
 
+const clean = record => {
+  const result = Object.assign({}, record);
+  delete result.Tentative;
+  delete result.StartDate;
+  delete result.EndDate;
+  return result;
+};
+
 const toMonthsInvolved = record => {
   const { StartDate, EndDate } = record;
   const months = monthsInBetween(StartDate, EndDate);
@@ -86,8 +94,6 @@ const toMonthsInvolved = record => {
 
 const explodeDates = record => record.months.map(month => {
   const result = Object.assign({}, record);
-  delete result.StartDate;
-  delete result.EndDate;
   delete result.months;
   return {
     ...result,
@@ -96,6 +102,7 @@ const explodeDates = record => record.months.map(month => {
 });
 
 const flatten = (total, current) => current.concat(total);
+const isConsolidated = ({ Tentative }) => !Tentative;
 const byYear = year => ({ Month }) => moment(Month, MONTH_YEAR_FORMAT).format('YYYY') === year;
 const byFuture = ({ Month }) => {
   const thisMonth = moment().startOf('month');
@@ -126,14 +133,17 @@ const byMonth = (item1, item2) => {
   return month1.isBefore(month2) ? -1 : 0;
 };
 
-const buildFloatRecords = async () => {
+const getClients = async () => {
   const floatClients = await float.getClients();
-  const clients = floatClients.reduce((total, { client_id, name }) => ({
+  return floatClients.reduce((total, { client_id, name }) => ({
     ...total,
     [client_id]: name,
   }), {});
+};
+
+const getPeople = async () => {
   const floatPeople = await float.getPeople();
-  const people = floatPeople.reduce((total, { people_id, email, employee_type, people_type_id, avatar_file, department }) => ({
+  return floatPeople.reduce((total, { people_id, email, employee_type, people_type_id, avatar_file, department }) => ({
     ...total,
     [people_id]: {
       Consultant: email,
@@ -143,30 +153,49 @@ const buildFloatRecords = async () => {
       Country: department.name,
     }
   }), {});
+};
+
+const getAccounts = async () => {
   const floatAccounts = await float.getAccounts();
-  const accounts = floatAccounts.reduce((total, { account_id, name, email }) => ({
+  return floatAccounts.reduce((total, { account_id, name, email }) => ({
     ...total,
     [`${account_id}`]: {
       name,
       email,
     }
   }), {});
+};
+
+const getProjects = async (clients, accounts) => {
   const floatProjects = await float.getProjects();
-  const projects = floatProjects.reduce((total, { project_id, name, project_manager, client_id }) => ({
+  return floatProjects.reduce((total, { project_id, name, project_manager, client_id, tentative }) => ({
     ...total,
     [project_id]: {
       client: clients[client_id],
       name,
+      tentative: tentative === 1,
       manager: accounts[`${project_manager}`].email,
     }
   }), {});
+};
+
+const getTasks = async () => {
   const floatTasks = await float.getTasks();
-  const floatRecords = floatTasks.map((task) => {
-    const { project_id, start_date, end_date, people_id, billable, name } = task;
+  return floatTasks;
+};
+
+const buildFloatRecords = async () => {
+  const clients = await getClients();
+  const people = await getPeople();
+  const accounts = await getAccounts();
+  const projects = await getProjects(clients, accounts);
+  const tasks = await getTasks();
+  const floatRecords = tasks.map(({ project_id, start_date, end_date, people_id, billable, name }) => {
     const project = projects[`${project_id}`];
     return {
       Client: project.client,
       Project: project.name,
+      Tentative: project.tentative,
       Manager: project.manager,
       ...people[people_id],
       Task: name,
@@ -184,7 +213,9 @@ const buildFloatRecords = async () => {
 
   debug('Processing float records...');
   const records = floatRecords
+    .filter(isConsolidated)
     .map(toMonthsInvolved)
+    .map(clean)
     .map(explodeDates)
     .reduce(flatten, [])
     .filter(byYear('2019'))
