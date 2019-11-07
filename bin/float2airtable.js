@@ -5,7 +5,8 @@ const request = require('request-promise-native');
 const config = require('../config');
 
 const DATE_FORMAT = 'DD-MM-YYYY';
-const MONTH_FORMAT = 'MM-YYYY';
+const MONTH_YEAR_FORMAT = 'MM-YYYY';
+const MONTH_FORMAT = 'MMMM';
 
 const float = (() => {
   const baseUrl = config.float.url;
@@ -67,7 +68,7 @@ const monthsInBetween = (from, to) => {
   const limit = moment(to, DATE_FORMAT);
   const timeValues = [];
   while (limit.isAfter(interim) || limit.isSame(interim)) {
-    timeValues.push(interim.format(MONTH_FORMAT));
+    timeValues.push(interim.format(MONTH_YEAR_FORMAT));
     interim.add(1, 'month');
   }
   return timeValues;
@@ -94,10 +95,10 @@ const explodeDates = record => record.months.map(month => ({
 }));
 
 const flatten = (total, current) => current.concat(total);
-const byYear = year => ({ Month }) => moment(Month, MONTH_FORMAT).format('YYYY') === year;
+const byYear = year => ({ Month }) => moment(Month, MONTH_YEAR_FORMAT).format('YYYY') === year;
 const byFuture = ({ Month }) => {
   const thisMonth = moment().startOf('month');
-  const itemDate = moment(Month, MONTH_FORMAT);
+  const itemDate = moment(Month, MONTH_YEAR_FORMAT);
   return itemDate.isAfter(thisMonth) || itemDate.isSame(thisMonth);
 };
 const isWeekend = date => {
@@ -106,7 +107,7 @@ const isWeekend = date => {
 };
 
 const toTimesheet = row => {
-  const monthDate = moment(row.Month, MONTH_FORMAT);
+  const monthDate = moment(row.Month, MONTH_YEAR_FORMAT);
   const daysInMonth = monthDate.daysInMonth();
   const days = [...Array(daysInMonth).keys()];
   const timesheets = days.reduce((total, day) => ({
@@ -114,9 +115,14 @@ const toTimesheet = row => {
     [day + 1]: isWeekend(moment(`${day + 1}-${row.Month}`, DATE_FORMAT)) ? 0: 8,
   }), {});
   return {
-    basic: { ...row, Month: monthDate.format('MMMM') },
+    basic: { ...row, Month: monthDate.format(MONTH_FORMAT) },
     timesheets,
   };
+};
+const byMonth = (item1, item2) => {
+  const month1 = moment(item1.basic.Month, MONTH_FORMAT);
+  const month2 = moment(item2.basic.Month, MONTH_FORMAT);
+  return month1.isBefore(month2) ? -1 : 0;
 };
 
 const buildFloatRecords = async () => {
@@ -171,8 +177,8 @@ const buildFloatRecords = async () => {
     .reduce(flatten, [])
     .filter(byYear('2019'))
     .filter(byFuture)
-    .map(toTimesheet);
-
+    .map(toTimesheet)
+    .sort(byMonth);
   console.log('About to persist records on airtable...');
   try {
     for (const record of records) {
