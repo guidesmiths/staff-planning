@@ -95,6 +95,11 @@ const explodeDates = record => record.months.map(month => ({
 
 const flatten = (total, current) => current.concat(total);
 const byYear = year => ({ Month }) => moment(Month, MONTH_FORMAT).format('YYYY') === year;
+const byFuture = ({ Month }) => {
+  const thisMonth = moment().startOf('month');
+  const itemDate = moment(Month, MONTH_FORMAT);
+  return itemDate.isAfter(thisMonth) || itemDate.isSame(thisMonth);
+};
 const isWeekend = date => {
   const day = date.weekday();
   return (day === 6) || (day === 0);
@@ -165,6 +170,7 @@ const buildFloatRecords = async () => {
     .map(explodeDates)
     .reduce(flatten, [])
     .filter(byYear('2019'))
+    .filter(byFuture)
     .map(toTimesheet);
 
   console.log('About to persist records on airtable...');
