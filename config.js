@@ -7,7 +7,7 @@ module.exports = {
   },
   airtable: {
     url: 'https://api.airtable.com',
-    namespace: 'floattest',
+    namespace: '2019-global',
     key: process.env.AIRTABLE_KEY,
     base: process.env.AIRTABLE_BASE,
   },

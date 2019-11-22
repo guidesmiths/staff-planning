@@ -4,7 +4,7 @@ const moment = require('moment');
 const request = require('request-promise-native');
 const config = require('../config');
 
-const DATE_FORMAT = 'DD-MM-YYYY';
+const DATE_FORMAT = 'YYYY-MM-DD';
 const MONTH_YEAR_FORMAT = 'MM-YYYY';
 const MONTH_FORMAT = 'MMMM';
 
@@ -143,13 +143,12 @@ const getClients = async () => {
 
 const getPeople = async () => {
   const floatPeople = await float.getPeople();
-  return floatPeople.reduce((total, { people_id, email, employee_type, people_type_id, avatar_file, department }) => ({
+  return floatPeople.reduce((total, { people_id, email, employee_type, people_type_id, department }) => ({
     ...total,
     [people_id]: {
       Consultant: email,
       Type: people_type_id === 2 ? 'Contractor': 'Employee',
       Dedication: employee_type === 1 ? 'Full Time': 'Part Time',
-      Avatar: avatar_file,
       Country: department.name,
     }
   }), {});
@@ -207,12 +206,15 @@ const buildFloatRecords = async () => {
   return floatRecords;
 };
 
+const inspect = item => console.log(JSON.stringify(item)) || item;
+
 (async () => {
   debug('Building float records...');
   const floatRecords = await buildFloatRecords();
 
   debug('Processing float records...');
   const records = floatRecords
+    // .filter((item) => item.Project === 'UW SmartMeter')
     .filter(isConsolidated)
     .map(toMonthsInvolved)
     .map(clean)
