@@ -40,6 +40,7 @@ const float = (() => {
     getPeople: makeRequest.bind(this, `${baseUrl}/people`),
     getTasks: makeRequest.bind(this, `${baseUrl}/tasks`),
     getAccounts: makeRequest.bind(this, `${baseUrl}/accounts`),
+    getTimeOff: makeRequest.bind(this, `${baseUrl}/timeoffs`),
   };
 })();
 
@@ -189,12 +190,13 @@ const buildFloatRecords = async () => {
   const accounts = await getAccounts();
   const projects = await getProjects(clients, accounts);
   const tasks = await getTasks();
-  const floatRecords = tasks.map(({ project_id, start_date, end_date, people_id, billable, name }) => {
+  const floatRecords = tasks.map(({ task_id, project_id, start_date, end_date, people_id, billable, name, status }) => {
     const project = projects[`${project_id}`];
     return {
       Client: project.client,
+      Id: task_id,
       Project: project.name,
-      Tentative: project.tentative,
+      Tentative: status === 1 || project.tentative,
       Manager: project.manager,
       ...people[people_id],
       Task: name,
@@ -220,7 +222,7 @@ const inspect = item => console.log(JSON.stringify(item)) || item;
     .map(clean)
     .map(explodeDates)
     .reduce(flatten, [])
-    .filter(byYear('2019'))
+    // .filter(byYear('2019'))
     .filter(byFuture)
     .map(toTimesheet)
     .sort(byMonth);

@@ -7,7 +7,7 @@ module.exports = {
   },
   airtable: {
     url: 'https://api.airtable.com',
-    namespace: '2019-global',
+    namespace: 'timesheets',
     key: process.env.AIRTABLE_KEY,
     base: process.env.AIRTABLE_BASE,
   },
