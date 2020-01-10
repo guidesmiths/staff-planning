@@ -71,7 +71,7 @@ const toRecord = item => ({
   Client: item.client,
   Project: item.project,
   Month: item.month,
-  Year: parseInt(dateUtils.extractYear(item.date)),
+  Year: item.year,
   Task: item.name,
   Billable: item.billable,
   Manager: item.manager,
@@ -133,6 +133,7 @@ const addAsignee = people => item => ({
   .reduce(collapseTimesheet, new Map())
   .values() ]
   .map(toRecord);
+  // .map(inspect)
 
   console.log('About to persist records on airtable...');
   try {
