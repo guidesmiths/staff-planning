@@ -6,6 +6,7 @@ module.exports = {
     token: process.env.HARVEST_TOKEN,
   },
   airtable: {
+    dryRun: process.env.DRY_RUN === 'true',
     url: 'https://api.airtable.com',
     namespace: 'timesheets',
     key: process.env.AIRTABLE_KEY,
