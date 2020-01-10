@@ -64,25 +64,6 @@ const airtable = (() => {
   };
 })();
 
-const monthsInBetween = (from, to) => {
-  const interim = moment(from, DATE_FORMAT).clone();
-  const limit = moment(to, DATE_FORMAT);
-  const timeValues = [];
-  while (limit.isAfter(interim) || limit.isSame(interim)) {
-    timeValues.push(interim.format(MONTH_YEAR_FORMAT));
-    interim.add(1, 'month');
-  }
-  return timeValues;
-};
-
-const clean = record => {
-  const result = Object.assign({}, record);
-  delete result.Tentative;
-  delete result.StartDate;
-  delete result.EndDate;
-  return result;
-};
-
 const daysInBetween = (from, to) => {
   const interim = moment(from, DATE_FORMAT).clone();
   const limit = moment(to, DATE_FORMAT);
@@ -106,28 +87,13 @@ const addDaysInvolved = item => {
   };
 };
 
-// const explodeDates = record => record.months.map(month => {
-//   const result = Object.assign({}, record);
-//   delete result.months;
-//   return {
-//     ...result,
-//     Month: month
-//   };
-// });
-
-const explodeDates = item => {
-  const { task: { start_date, end_date } } = item;
-  return item.meta.days.map(date => {
-    const target = moment(date);
-    return {
-      ...item,
-      task: {
-        ...item.task,
-        date
-      }
-    };
-});
-} 
+const explodeDates = item => item.meta.days.map(date => ({    
+  ...item,
+  task: {
+    ...item.task,
+    date
+  }
+}));
 
 const flatten = (total, current) => current.concat(total);
 const isConsolidated = ({ task: { tentative } }) => !tentative;
@@ -140,25 +106,6 @@ const byFuture = ({ Month }) => {
 const isWeekend = date => {
   const day = date.weekday();
   return (day === 6) || (day === 0);
-};
-
-const toTimesheet = row => {
-  const monthDate = moment(row.Month, MONTH_YEAR_FORMAT);
-  const daysInMonth = monthDate.daysInMonth();
-  const days = [...Array(daysInMonth).keys()];
-  const timesheets = days.reduce((total, day) => ({
-    ...total,
-    [day + 1]: isWeekend(moment(`${day + 1}-${row.Month}`, DATE_FORMAT)) ? 0: 8,
-  }), {});
-  return {
-    basic: { ...row, Month: monthDate.format(MONTH_FORMAT) },
-    timesheets,
-  };
-};
-const byMonth = (item1, item2) => {
-  const month1 = moment(item1.basic.Month, MONTH_FORMAT);
-  const month2 = moment(item2.basic.Month, MONTH_FORMAT);
-  return month1.isBefore(month2) ? -1 : 0;
 };
 
 const byDate = (item1, item2) => moment(item1.task.date).isBefore(moment(item2.task.date)) ? -1 : 0;
@@ -212,25 +159,6 @@ const getTasks = async () => {
   const floatTasks = await float.getTasks();
   return floatTasks;
 };
-
-// const buildFloatRecords = async () => {
-//   const clients = await getClients();
-//   const people = await getPeople();
-//   const accounts = await getAccounts();
-//   const projects = await getProjects(clients, accounts);
-//   const tasks = await getTasks();
-//   const floatRecords = tasks.map(({ task_id, project_id, start_date, end_date, people_id, billable, name, status }) => {
-//     const project = projects[`${project_id}`];
-//     return {
-//       ...people[people_id],
-//       Task: name,
-//       Billable: billable === 1,
-//       StartDate: start_date,
-//       EndDate: end_date,
-//     };
-//   });
-//   return floatRecords;
-// };
 
 const collapseTimesheet = (total, item) => {
   const id = `${item.id}:${item.month}:${item.year}`;
@@ -337,20 +265,7 @@ const addAsignee = people => item => ({
   .reduce(collapseTimesheet, new Map())
   .values() ]
   .map(toRecord);
-  
-  // const floatRecords = await buildFloatRecords();
 
-  // debug('Processing float records...');
-  // const records = floatRecords
-  //   // .filter((item) => item.Project === 'UW SmartMeter')
-  //   .filter(isConsolidated)
-  //   .map(toMonthsInvolved)
-  //   .map(clean)
-  //   .map(explodeDates)
-  //   .reduce(flatten, [])
-
-  //   .map(toTimesheet)
-  //   .sort(byMonth);
   console.log('About to persist records on airtable...');
   try {
     for (const record of records) {
