@@ -127,12 +127,12 @@ const addAsignee = people => item => ({
   .map(addDaysInvolved)
   .map(explodeDates)
   .reduce(flatten, [])
-  .sort(dateUtils.byDate)
   // map(applyTimeOff)
   .map(toFlatItem)
   .reduce(collapseTimesheet, new Map())
   .values() ]
-  .map(toRecord);
+  .map(toRecord)
+  .sort(dateUtils.byDate);
   // .map(inspect)
 
   console.log('About to persist records on airtable...');
