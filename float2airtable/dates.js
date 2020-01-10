@@ -23,16 +23,23 @@ const byFuture = ({ Month }) => {
   return itemDate.isAfter(thisMonth) || itemDate.isSame(thisMonth);
 };
 const isWeekend = date => {
-  const day = date.weekday();
+  const day = moment(date, DATE_FORMAT).weekday();
   return (day === 6) || (day === 0);
 };
 
 const byDate = (item1, item2) => moment(item1.task.date).isBefore(moment(item2.task.date)) ? -1 : 0;
+
+const extractDay = (date) => moment(date).format(DAY_FORMAT);
+const extractMonth = (date) => moment(date).format(MONTH_FORMAT);
+const extractYear = (date) => moment(date).format(YEAR_FORMAT);
 
 module.exports = {
   byYear,
   byFuture,
   byDate,
   isWeekend,
-  daysInBetween
+  daysInBetween,
+  extractDay,
+  extractMonth,
+  extractYear
 };

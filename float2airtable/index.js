@@ -1,15 +1,9 @@
 const debug = require('debug')('float2airtable');
-const moment = require('moment');
 const config = require('../config');
 const airtable = require('./airtable')(config.airtable);
 const float = require('./float')(config.float);
+// floatAdapter(float)
 const dateUtils = require('./dates');
-
-const DATE_FORMAT = 'YYYY-MM-DD';
-const MONTH_YEAR_FORMAT = 'MM-YYYY';
-const MONTH_FORMAT = 'MMMM';
-const YEAR_FORMAT = 'YYYY';
-const DAY_FORMAT = 'D';
 
 const addDaysInvolved = item => {
   const { task: { start_date, end_date } } = item;
@@ -98,8 +92,8 @@ const collapseTimesheet = (total, item) => {
 const inspect = item => console.log(JSON.stringify(item)) || item;
 
 const toFlatItem = ({ task, asignee }) => {
-  const day = moment(task.date).format(DAY_FORMAT);
-  const hours = dateUtils.isWeekend(moment(task.date, DATE_FORMAT)) ? 0: task.hours;
+  const day = dateUtils.extractDay(task.date);
+  const hours = dateUtils.isWeekend(task.date) ? 0: task.hours;
   return {
     consultant: asignee.consultant,
     type: asignee.type,
@@ -109,8 +103,8 @@ const toFlatItem = ({ task, asignee }) => {
     client: task.client,
     project: task.project,
     days: [{ [day]: hours }],
-    month: moment(task.date).format(MONTH_FORMAT),
-    year: moment(task.date).format(YEAR_FORMAT),
+    month: dateUtils.extractMonth(task.date),
+    year: dateUtils.extractYear(task.date),
     task: task.name,
     billable: task.billable,
     manager: task.manager,
@@ -127,7 +121,7 @@ const toRecord = item => ({
   Client: item.client,
   Project: item.project,
   Month: item.month,
-  Year: parseInt(moment(item.date).format(YEAR_FORMAT)),
+  Year: parseInt(dateUtils.extractYear(item.date)),
   Task: item.name,
   Billable: item.billable,
   Manager: item.manager,
