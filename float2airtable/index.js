@@ -3,6 +3,7 @@ const moment = require('moment');
 const config = require('../config');
 const airtable = require('./airtable')(config.airtable);
 const float = require('./float')(config.float);
+const dateUtils = require('./dates');
 
 const DATE_FORMAT = 'YYYY-MM-DD';
 const MONTH_YEAR_FORMAT = 'MM-YYYY';
@@ -10,20 +11,9 @@ const MONTH_FORMAT = 'MMMM';
 const YEAR_FORMAT = 'YYYY';
 const DAY_FORMAT = 'D';
 
-const daysInBetween = (from, to) => {
-  const interim = moment(from, DATE_FORMAT).clone();
-  const limit = moment(to, DATE_FORMAT);
-  const timeValues = [];
-  while (limit.isAfter(interim) || limit.isSame(interim)) {
-    timeValues.push(interim.format(DATE_FORMAT));
-    interim.add(1, 'day');
-  }
-  return timeValues;
-};
-
 const addDaysInvolved = item => {
   const { task: { start_date, end_date } } = item;
-  const days = daysInBetween(start_date, end_date);
+  const days = dateUtils.daysInBetween(start_date, end_date);
   return {
     ...item,
     meta: {
@@ -43,18 +33,6 @@ const explodeDates = item => item.meta.days.map(date => ({
 
 const flatten = (total, current) => current.concat(total);
 const isConsolidated = ({ task: { tentative } }) => !tentative;
-const byYear = year => ({ Month }) => moment(Month, MONTH_YEAR_FORMAT).format('YYYY') === year;
-const byFuture = ({ Month }) => {
-  const thisMonth = moment().startOf('month');
-  const itemDate = moment(Month, MONTH_YEAR_FORMAT);
-  return itemDate.isAfter(thisMonth) || itemDate.isSame(thisMonth);
-};
-const isWeekend = date => {
-  const day = date.weekday();
-  return (day === 6) || (day === 0);
-};
-
-const byDate = (item1, item2) => moment(item1.task.date).isBefore(moment(item2.task.date)) ? -1 : 0;
 
 const getClients = async () => {
   const floatClients = await float.getClients();
@@ -121,7 +99,7 @@ const inspect = item => console.log(JSON.stringify(item)) || item;
 
 const toFlatItem = ({ task, asignee }) => {
   const day = moment(task.date).format(DAY_FORMAT);
-  const hours = isWeekend(moment(task.date, DATE_FORMAT)) ? 0: task.hours;
+  const hours = dateUtils.isWeekend(moment(task.date, DATE_FORMAT)) ? 0: task.hours;
   return {
     consultant: asignee.consultant,
     type: asignee.type,
@@ -205,7 +183,7 @@ const addAsignee = people => item => ({
   .map(addDaysInvolved)
   .map(explodeDates)
   .reduce(flatten, [])
-  .sort(byDate)
+  .sort(dateUtils.byDate)
   // map(applyTimeOff)
   .map(toFlatItem)
   .reduce(collapseTimesheet, new Map())
