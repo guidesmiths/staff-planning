@@ -7,6 +7,8 @@ const config = require('../config');
 const DATE_FORMAT = 'YYYY-MM-DD';
 const MONTH_YEAR_FORMAT = 'MM-YYYY';
 const MONTH_FORMAT = 'MMMM';
+const YEAR_FORMAT = 'YYYY';
+const DAY_FORMAT = 'D';
 
 const float = (() => {
   const baseUrl = config.float.url;
@@ -49,12 +51,9 @@ const airtable = (() => {
     endpointUrl: config.airtable.url,
     apiKey: config.airtable.key
   });
-  const persist = async ({ basic, timesheets }) => new Promise((resolve, reject) => {
+  const persist = async (item) => new Promise((resolve, reject) => {
     const base = Airtable.base(config.airtable.base);
-    base(config.airtable.namespace).create({
-      ...basic,
-      ...timesheets
-    }, (err, record) => {
+    base(config.airtable.namespace).create(item, (err, record) => {
       if (err) return reject(err);
       debug(`Record persisted ${record.id}`);
       resolve(record);
@@ -84,26 +83,54 @@ const clean = record => {
   return result;
 };
 
-const toMonthsInvolved = record => {
-  const { StartDate, EndDate } = record;
-  const months = monthsInBetween(StartDate, EndDate);
+const daysInBetween = (from, to) => {
+  const interim = moment(from, DATE_FORMAT).clone();
+  const limit = moment(to, DATE_FORMAT);
+  const timeValues = [];
+  while (limit.isAfter(interim) || limit.isSame(interim)) {
+    timeValues.push(interim.format(DATE_FORMAT));
+    interim.add(1, 'day');
+  }
+  return timeValues;
+};
+
+const addDaysInvolved = item => {
+  const { task: { start_date, end_date } } = item;
+  const days = daysInBetween(start_date, end_date);
   return {
-    ...record,
-    months,
+    ...item,
+    meta: {
+      ...item.meta || {},
+      days,
+    }
   };
 };
 
-const explodeDates = record => record.months.map(month => {
-  const result = Object.assign({}, record);
-  delete result.months;
-  return {
-    ...result,
-    Month: month
-  };
+// const explodeDates = record => record.months.map(month => {
+//   const result = Object.assign({}, record);
+//   delete result.months;
+//   return {
+//     ...result,
+//     Month: month
+//   };
+// });
+
+const explodeDates = item => {
+  const { task: { start_date, end_date } } = item;
+  return item.meta.days.map(date => {
+    const target = moment(date);
+    return {
+      ...item,
+      task: {
+        ...item.task,
+        date
+      }
+    };
 });
+} 
 
 const flatten = (total, current) => current.concat(total);
-const isConsolidated = ({ Tentative }) => !Tentative;
+const isConsolidated = ({ task: { tentative } }) => !tentative;
 const byYear = year => ({ Month }) => moment(Month, MONTH_YEAR_FORMAT).format('YYYY') === year;
 const byFuture = ({ Month }) => {
   const thisMonth = moment().startOf('month');
@@ -134,6 +161,8 @@ const byMonth = (item1, item2) => {
   return month1.isBefore(month2) ? -1 : 0;
 };
 
+const byDate = (item1, item2) => moment(item1.task.date).isBefore(moment(item2.task.date)) ? -1 : 0;
+
 const getClients = async () => {
   const floatClients = await float.getClients();
   return floatClients.reduce((total, { client_id, name }) => ({
@@ -147,10 +176,10 @@ const getPeople = async () => {
   return floatPeople.reduce((total, { people_id, email, employee_type, people_type_id, department }) => ({
     ...total,
     [people_id]: {
-      Consultant: email,
-      Type: people_type_id === 2 ? 'Contractor': 'Employee',
-      Dedication: employee_type === 1 ? 'Full Time': 'Part Time',
-      Country: department.name,
+      consultant: email,
+      type: people_type_id === 2 ? 'Contractor': 'Employee',
+      dedication: employee_type === 1 ? 'Full Time': 'Part Time',
+      country: department.name,
     }
   }), {});
 };
@@ -184,48 +213,144 @@ const getTasks = async () => {
   return floatTasks;
 };
 
-const buildFloatRecords = async () => {
+// const buildFloatRecords = async () => {
+//   const clients = await getClients();
+//   const people = await getPeople();
+//   const accounts = await getAccounts();
+//   const projects = await getProjects(clients, accounts);
+//   const tasks = await getTasks();
+//   const floatRecords = tasks.map(({ task_id, project_id, start_date, end_date, people_id, billable, name, status }) => {
+//     const project = projects[`${project_id}`];
+//     return {
+//       ...people[people_id],
+//       Task: name,
+//       Billable: billable === 1,
+//       StartDate: start_date,
+//       EndDate: end_date,
+//     };
+//   });
+//   return floatRecords;
+// };
+
+const collapseTimesheet = (total, item) => {
+  const id = `${item.id}:${item.month}:${item.year}`;
+  const task = total.get(id);
+  if (task) {
+    task.days = task.days.concat(item.days);
+  } else {
+    total.set(id, item);
+  }
+  return total;
+};
+
+const inspect = item => console.log(JSON.stringify(item)) || item;
+
+const toFlatItem = ({ task, asignee }) => {
+  const day = moment(task.date).format(DAY_FORMAT);
+  const hours = isWeekend(moment(task.date, DATE_FORMAT)) ? 0: task.hours;
+  return {
+    consultant: asignee.consultant,
+    type: asignee.type,
+    dedication: asignee.dedication,
+    country: asignee.country,
+    id: task.task_id,
+    client: task.client,
+    project: task.project,
+    days: [{ [day]: hours }],
+    month: moment(task.date).format(MONTH_FORMAT),
+    year: moment(task.date).format(YEAR_FORMAT),
+    task: task.name,
+    billable: task.billable,
+    manager: task.manager,
+  };
+};
+
+const toRecord = item => ({
+  // keep id to get airtable id?
+  ...Object.assign(...item.days),
+  Consultant: item.consultant,
+  Type: item.type,
+  Dedication: item.dedication,
+  Country: item.country,
+  Client: item.client,
+  Project: item.project,
+  Month: item.month,
+  Year: parseInt(moment(item.date).format(YEAR_FORMAT)),
+  Task: item.name,
+  Billable: item.billable,
+  Manager: item.manager,
+});
+
+const extractSummary = ({ task_id, project_id, start_date, end_date, people_id, billable, name, status, hours }) => ({
+  task: {
+    task_id,
+    project_id,
+    start_date,
+    end_date,
+    people_id,
+    billable: billable === 1,
+    name,
+    hours,
+    status,
+  }
+});
+
+const addProjectData = projects => item => ({
+  ...item,
+  task: {
+    ...item.task,
+    client: projects[`${item.task.project_id}`].client,
+    project: projects[`${item.task.project_id}`].name,
+    tentative: item.task.status === 1 || projects[`${item.task.project_id}`].tentative,
+    manager: projects[`${item.task.project_id}`].manager,
+  }
+});
+
+const addAsignee = people => item => ({
+  ...item,
+  asignee: {
+    ...people[item.task.people_id]
+  }
+});
+
+(async () => {
   const clients = await getClients();
   const people = await getPeople();
   const accounts = await getAccounts();
   const projects = await getProjects(clients, accounts);
   const tasks = await getTasks();
-  const floatRecords = tasks.map(({ task_id, project_id, start_date, end_date, people_id, billable, name, status }) => {
-    const project = projects[`${project_id}`];
-    return {
-      Client: project.client,
-      Id: task_id,
-      Project: project.name,
-      Tentative: status === 1 || project.tentative,
-      Manager: project.manager,
-      ...people[people_id],
-      Task: name,
-      Billable: billable === 1,
-      StartDate: start_date,
-      EndDate: end_date,
-    };
-  });
-  return floatRecords;
-};
 
-const inspect = item => console.log(JSON.stringify(item)) || item;
+  debug('Building float enriched tasks...');
+  const records = [ ...tasks
+  .map(extractSummary)
+  .map(addProjectData(projects))
+  .map(addAsignee(people))
+  .filter(isConsolidated)
+  //  .filter(byYear('2019'))
+  //  .filter(byFuture)
+  .map(addDaysInvolved)
+  .map(explodeDates)
+  .reduce(flatten, [])
+  .sort(byDate)
+  // map(applyTimeOff)
+  .map(toFlatItem)
+  .reduce(collapseTimesheet, new Map())
+  .values() ]
+  .map(toRecord);
+  
+  // const floatRecords = await buildFloatRecords();
 
-(async () => {
-  debug('Building float records...');
-  const floatRecords = await buildFloatRecords();
+  // debug('Processing float records...');
+  // const records = floatRecords
+  //   // .filter((item) => item.Project === 'UW SmartMeter')
+  //   .filter(isConsolidated)
+  //   .map(toMonthsInvolved)
+  //   .map(clean)
+  //   .map(explodeDates)
+  //   .reduce(flatten, [])
 
-  debug('Processing float records...');
-  const records = floatRecords
-    // .filter((item) => item.Project === 'UW SmartMeter')
-    .filter(isConsolidated)
-    .map(toMonthsInvolved)
-    .map(clean)
-    .map(explodeDates)
-    .reduce(flatten, [])
-    // .filter(byYear('2019'))
-    .filter(byFuture)
-    .map(toTimesheet)
-    .sort(byMonth);
+  //   .map(toTimesheet)
+  //   .sort(byMonth);
   console.log('About to persist records on airtable...');
   try {
     for (const record of records) {
