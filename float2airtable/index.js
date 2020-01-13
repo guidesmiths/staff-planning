@@ -61,6 +61,15 @@ const toFlatItem = ({ task, asignee }) => {
   };
 };
 
+const applyTimeOff = timeOff => item => {
+  // timeOff will be a map with entries like
+  // [felipe.polo@gmail.com]: [ { "2019-10-12": 8 }, { "2019-10-14": 4 } ]
+  const currentDate = `${item.year}-${item.month}-${item.days[0].keys()[0]}`;
+  const daysBlacklist = timeOff[item.consultant];
+  const hoursOff = daysBlacklist.find(offData => offData[currentDate]);
+  return !hoursOff ? item: ({ ...item, days: [], });
+};
+
 const toRecord = item => ({
   // keep id to get airtable id?
   ...Object.assign(...item.days),
@@ -110,8 +119,9 @@ const addAsignee = people => item => ({
 });
 
 (async () => {
-  const clients = await floatAdapter.getClients();
   const people = await floatAdapter.getPeople();
+  const timeOff = await floatAdapter.getTimeOff(people);
+  const clients = await floatAdapter.getClients();
   const accounts = await floatAdapter.getAccounts();
   const projects = await floatAdapter.getProjects(clients, accounts);
   const tasks = await floatAdapter.getTasks();
@@ -127,13 +137,13 @@ const addAsignee = people => item => ({
   .map(addDaysInvolved)
   .map(explodeDates)
   .reduce(flatten, [])
-  // map(applyTimeOff)
   .map(toFlatItem)
+  // .map(applyTimeOff(timeOff))
+  // .map(inspect)
   .reduce(collapseTimesheet, new Map())
   .values() ]
   .map(toRecord)
   .sort(dateUtils.byDate);
-  // .map(inspect)
 
   console.log('About to persist records on airtable...');
   try {

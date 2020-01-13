@@ -1,3 +1,5 @@
+const datesUtils = require('./dates');
+
 module.exports = (float) => {
   const getClients = async () => {
     const floatClients = await float.getClients();
@@ -48,6 +50,39 @@ module.exports = (float) => {
     const floatTasks = await float.getTasks();
     return floatTasks;
   };
+  
+  const getTimeOff = async (people) => {
+    // timeOff will produce a map with entries like
+    // [felipe.polo@gmail.com]: [ { "2019-10-12": 8 }, { "2019-10-14": 4 } ]
+    const extractConsultant = id => people[id].consultant;
+    const flatten = (total, current) => current.concat(total);
+    
+    const floatTimeOff = await float.getTimeOff();
+    return floatTimeOff
+    .map(item => ({
+      ...item,
+      people: item.people_ids.map(extractConsultant),
+    }))
+    .map(item => {
+      const hours= item.hours || 8;
+      const daysOff = datesUtils.daysInBetween(item.start_date, item.end_date);
+      return {
+        people: item.people,
+        hoursByDays: daysOff.map(day => ({ [day]: hours })),
+      }
+    })
+    .map(item => item.people.map(person => ({ person, off: item.hoursByDays })))
+    .reduce(flatten)
+    .reduce((total, { person, off }) => {
+      const entry = total[person];
+      if (!entry) {
+        total[person] = off;
+      } else {
+        total[person].push(...off);
+      }
+      return total;
+    }, {});
+  };
 
   return {
     getAccounts,
@@ -55,5 +90,6 @@ module.exports = (float) => {
     getPeople,
     getProjects,
     getTasks,
+    getTimeOff,
   };
 };
