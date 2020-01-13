@@ -64,10 +64,17 @@ const toFlatItem = ({ task, asignee }) => {
 const applyTimeOff = timeOff => item => {
   // timeOff will be a map with entries like
   // [felipe.polo@gmail.com]: [ { "2019-10-12": 8 }, { "2019-10-14": 4 } ]
-  const currentDate = `${item.year}-${item.month}-${item.days[0].keys()[0]}`;
-  const daysBlacklist = timeOff[item.consultant];
-  const hoursOff = daysBlacklist.find(offData => offData[currentDate]);
-  return !hoursOff ? item: ({ ...item, days: [], });
+  const DAILY_HOURS = 8;
+  const day = Object.keys(item.days[0])[0];
+  const currentDate = `${item.year}-${item.month}-${day}`;
+  const daysBlacklist = timeOff[item.consultant] || [];
+  const actualOff = daysBlacklist.find(offData => offData[currentDate]);
+  if (actualOff) {
+    const hours = actualOff[currentDate];
+    debug(`Found ${item.consultant} is off ${hours} hours on ${currentDate}`);
+    return { ...item, days: [ { [currentDate]: DAILY_HOURS - hours } ] };
+  }
+  return item;
 };
 
 const toRecord = item => ({
@@ -138,7 +145,7 @@ const addAsignee = people => item => ({
   .map(explodeDates)
   .reduce(flatten, [])
   .map(toFlatItem)
-  // .map(applyTimeOff(timeOff))
+  .map(applyTimeOff(timeOff))
   // .map(inspect)
   .reduce(collapseTimesheet, new Map())
   .values() ]
