@@ -72,7 +72,7 @@ const applyTimeOff = timeOff => item => {
   if (actualOff) {
     const hours = actualOff[currentDate];
     debug(`Found ${item.consultant} is off ${hours} hours on ${currentDate}`);
-    return { ...item, days: [ { [currentDate]: DAILY_HOURS - hours } ] };
+    return { ...item, days: [ { [day]: DAILY_HOURS - hours } ] };
   }
   return item;
 };
