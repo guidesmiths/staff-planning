@@ -2,6 +2,8 @@ const debug = require('debug')('float2airtable');
 const dateUtils = require('./dates');
 const config = require('../config');
 const airtable = require('./airtable')(config.airtable);
+const initDb = require('../db');
+const initStore = require('./store');
 const float = require('./float')(config.float);
 const floatAdapter = require('./float-adapter')(float);
 
@@ -78,7 +80,6 @@ const applyTimeOff = timeOff => item => {
 };
 
 const toRecord = item => ({
-  // keep id to get airtable id?
   ...Object.assign(...item.days),
   Consultant: item.consultant,
   Type: item.type,
@@ -126,36 +127,38 @@ const addAsignee = people => item => ({
 });
 
 (async () => {
-  const people = await floatAdapter.getPeople();
-  const timeOff = await floatAdapter.getTimeOff(people);
-  const clients = await floatAdapter.getClients();
-  const accounts = await floatAdapter.getAccounts();
-  const projects = await floatAdapter.getProjects(clients, accounts);
-  const tasks = await floatAdapter.getTasks();
-
-  debug('Building float enriched tasks...');
-  const records = [ ...tasks
-  .map(extractSummary)
-  .map(addProjectData(projects))
-  .map(addAsignee(people))
-  .filter(isConsolidated)
-  //  .filter(byYear('2019'))
-  //  .filter(byFuture)
-  .map(addDaysInvolved)
-  .map(explodeDates)
-  .reduce(flatten, [])
-  .map(toFlatItem)
-  .map(applyTimeOff(timeOff))
-  // .map(inspect)
-  .reduce(collapseTimesheet, new Map())
-  .values() ]
-  .map(toRecord)
-  .sort(dateUtils.byDate);
-
-  console.log('About to persist records on airtable...');
   try {
+    const mongo = await initDb(config.db);
+    const store = initStore(airtable, mongo);
+    const people = await floatAdapter.getPeople();
+    const timeOff = await floatAdapter.getTimeOff(people);
+    const clients = await floatAdapter.getClients();
+    const accounts = await floatAdapter.getAccounts();
+    const projects = await floatAdapter.getProjects(clients, accounts);
+    const tasks = await floatAdapter.getTasks();
+
+    debug('Building float enriched tasks...');
+    const records = [ ...tasks
+    .map(extractSummary)
+    .map(addProjectData(projects))
+    .map(addAsignee(people))
+    .filter(isConsolidated)
+    //  .filter(byYear('2019'))
+    //  .filter(byFuture)
+    .map(addDaysInvolved)
+    .map(explodeDates)
+    .reduce(flatten, [])
+    .map(toFlatItem)
+    .map(applyTimeOff(timeOff))
+    .reduce(collapseTimesheet, new Map())
+    .values() ]
+    // .map(inspect)
+    .map(toRecord)
+    .sort(dateUtils.byDate);
+
+    console.log('About to persist records...');
     for (const record of records) {
-      await airtable.persist(record);
+      await store.upsert(record);
     }
   } catch (e) {
     console.error(e);
