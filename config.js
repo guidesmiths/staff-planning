@@ -8,7 +8,7 @@ module.exports = {
   airtable: {
     dryRun: process.env.DRY_RUN === 'true',
     url: 'https://api.airtable.com',
-    namespace: 'timesheets-off',
+    namespace: 'timesheets-test',
     key: process.env.AIRTABLE_KEY,
     base: process.env.AIRTABLE_BASE,
   },

@@ -5,10 +5,12 @@ module.exports = async (config) => {
   const mongo = await MongoClient.connect(config.url, config.options);
   const db = mongo.db(config.database);
   debug('Configuring db....');
-  // db.collection('plans').createIndex({ 'project.id': 1 }, { unique: true });
-  // db.collection('plans').createIndex({ 'assignments.user.id': 1 });
-  // db.collection('users').createIndex({ 'id': 1 });
-  // db.collection('users').createIndex({ 'email': 1 }, { unique: true });
+  db.collection('records').createIndex({ 'task': 1 });
+  db.collection('records').createIndex({ 'consultant': 1 });
+  db.collection('records').createIndex({ 'project': 1 });
+  db.collection('records').createIndex({ 'month': 1 });
+  db.collection('records').createIndex({ 'year': 1 });
+  db.collection('records').createIndex({ 'recordId': 1 });
 
   // const insertManyPlans = async plans => {
   //   await db.collection('plans').deleteMany({});
@@ -30,7 +32,21 @@ module.exports = async (config) => {
   //   return plans.toArray();
   // };
 
+  const findRecord = async (query) => {
+    debug('Trying to find record...')
+    const item = await db.collection('records').findOne(query);
+    return item;
+  }
+  
+  const updateId = async (query, id) => {
+    debug(`Trying to update record with id ${id}...`)
+    const item = await db.collection('records').findOneAndUpdate(query); // TODO
+    return item;
+  }
+
   return {
+    findRecord,
+    updateId,
     // insertManyPlans,
     // insertManyUsers,
     // getUsers,

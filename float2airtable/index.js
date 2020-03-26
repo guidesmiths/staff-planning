@@ -79,21 +79,6 @@ const applyTimeOff = timeOff => item => {
   return item;
 };
 
-const toRecord = item => ({
-  ...Object.assign(...item.days),
-  Consultant: item.consultant,
-  Type: item.type,
-  Dedication: item.dedication,
-  Country: item.country,
-  Client: item.client,
-  Project: item.project,
-  Month: item.month,
-  Year: item.year,
-  Task: item.name,
-  Billable: item.billable,
-  Manager: item.manager,
-});
-
 const extractSummary = ({ task_id, project_id, start_date, end_date, people_id, billable, name, status, hours }) => ({
   task: {
     task_id,
@@ -151,10 +136,8 @@ const addAsignee = people => item => ({
     .map(toFlatItem)
     .map(applyTimeOff(timeOff))
     .reduce(collapseTimesheet, new Map())
-    .values() ]
+    .values() ];
     // .map(inspect)
-    .map(toRecord)
-    .sort(dateUtils.byDate);
 
     console.log('About to persist records...');
     for (const record of records) {

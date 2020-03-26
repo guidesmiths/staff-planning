@@ -18,7 +18,13 @@ module.exports = (config) => {
     resolve(record);
     });
   });
+
+  const update = {
+
+  };
+
   return {
-    persist
+    persist,
+    update,
   };
 };
