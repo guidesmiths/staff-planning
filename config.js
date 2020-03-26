@@ -12,6 +12,9 @@ module.exports = {
     key: process.env.AIRTABLE_KEY,
     base: process.env.AIRTABLE_BASE,
   },
+  bamboo: {
+    token: process.env.BAMBOO_TOKEN,
+  },
   float: {
     url: 'https://api.float.com/v3',
     token: process.env.FLOAT_TOKEN,

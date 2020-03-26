@@ -18,6 +18,7 @@
     "moment": "^2.24.0",
     "mongodb": "^3.3.2",
     "request": "^2.88.0",
-    "request-promise-native": "^1.0.8"
+    "request-promise-native": "^1.0.8",
+    "xml2json": "^0.12.0"
   }
 }
