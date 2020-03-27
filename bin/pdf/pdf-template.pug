@@ -1,6 +1,102 @@
 // Use !{var} to use unescaped conent
 style(type="text/css") !{compiledStyle}
 
-div#banner-message
-    p Hello, #{displayName}
-    button My god, this is amazing
+doctype
+html(lang="en")
+  include ./config.pug
+  head
+    title= head.title
+    meta(charset="utf-8")
+    meta(name="viewport" content="width=device-width, initial-scale=1")
+    meta(http-equiv="X-UA-Compatible" content="IE=edge")
+    meta(name="description" content= head.description)
+    meta(name="keywords" content= head.keywords)
+    meta(name="author" content= head.author)
+  body
+
+    .resume
+      .introduction
+        .introduction__wrapper.l-wrapper
+          header.header
+            .header__symbol
+            h1.header__name
+              span= name.first
+              span= name.last
+          ul.basics
+            each val, key in basics
+              li.basics__el
+                span.label= key
+                a(class="info" href= val.href target="_blank")= val.display
+          p.blurb !{blurb}
+          ul.socials
+            each val, key in socials
+              li.socials__el
+                span.label= key
+                a(class="info" href= val.url target="_blank")= val.display
+      .primary
+        .primary__wrapper.l-wrapper
+          h2.primary__heading= experience.heading
+          ul.experience
+            each val, key in experience.content
+              li.experience__el
+                a(class="link" href= val.url target="_blank")
+                  .short
+                    h3.short__title= key
+                    span.short__date= val.date
+                  .extended
+                    h3.extended__role= val.role
+                    p.extended__description= val.description
+          .additional
+            .about
+              .schooling
+                h2.primary__heading= education.heading
+                ul.education
+                  each val, key in education.content
+                    li.education__el
+                      p.degree= val
+                      p.school= key
+              .interests
+                h2.primary__heading= hobbies.heading
+                p.hobbies= hobbies.list
+            //
+              Less than ideal solution for listing skill svgs.
+              However, more reliable, maintainable, & performant
+              than relying on a CDN/Self-Hosted option.
+            //- .technical
+            //-   h2.primary__heading= skills.heading
+            //-   ul.skills
+            //-     li.skills__el
+            //-       include ../assets/img/skills/javascript.svg
+            //-     li.skills__el
+            //-       include ../assets/img/skills/react.svg
+            //-     li.skills__el
+            //-       include ../assets/img/skills/angular.svg
+            //-     li.skills__el
+            //-       include ../assets/img/skills/backbone.svg
+            //-     li.skills__el
+            //-       include ../assets/img/skills/jquery.svg
+            //-     li.skills__el
+            //-       include ../assets/img/skills/electron.svg
+            //-     li.skills__el
+            //-       include ../assets/img/skills/redux.svg
+            //-     li.skills__el
+            //-       include ../assets/img/skills/ngrx.svg
+            //-     li.skills__el
+            //-       include ../assets/img/skills/jest.svg
+            //-     li.skills__el
+            //-       include ../assets/img/skills/jasmine.svg
+            //-     li.skills__el
+            //-       include ../assets/img/skills/webpack.svg
+            //-     li.skills__el
+            //-       include ../assets/img/skills/gulp.svg
+            //-     li.skills__el
+            //-       include ../assets/img/skills/html5.svg
+            //-     li.skills__el
+            //-       include ../assets/img/skills/css3.svg
+            //-     li.skills__el
+            //-       include ../assets/img/skills/sass.svg
+            //-     li.skills__el
+            //-       include ../assets/img/skills/git.svg
+            //-     li.skills__el
+            //-       include ../assets/img/skills/github.svg
+            //-   p.technical__list= skills.list

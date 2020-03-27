@@ -1,0 +1,101 @@
+//-------------------- Introduction --------------------//
+//- HTML title & meta
+-
+  head = {
+    title: "#{firstName} #{lastName} | Software Engineer",
+    description: "#{firstName} #{lastName} GuideSmiths CV",
+    keywords: "guidesmiths,cv",
+    author: "GuideSmiths Ltd"
+  }
+//- Header
+    Set header image in introduction.sass
+-
+  name = {
+    first: firstName,
+    last: lastName
+  }
+//- Basic contact and online presence
+    ONLY change the phone numbers, maintain "tel:" in the href
+    ONLY change the email addresses, maintain "mailto:" in the href
+-
+  basics = {
+    Call: {
+      display: "407-488-8478",
+      href: "tel:407-488-8478"
+    },
+    Mail: {
+      display: workEmail,
+      href: "mailto:#{workEmail}"
+    },
+    Web: {
+      display: linkedIn,
+      href: linkedIn
+    }
+  }
+//- Objective / Executive Summary / About
+- blurb = "<span>Hello</span> With my front-end development skill set I'd like to make a difference by providing reliable, responsive, and performant user interfaces for software that is interacted with on a daily basis."
+
+//- Online elsewhere
+-
+  socials = {
+    Twitter: {
+      display: "@guidesmiths",
+      url: "https://twitter.com/guidesmiths"
+    },
+    GitHub: {
+      display: "guidesmiths",
+      url: "https://github.com/guidesmiths"
+    },
+    LinkedIn: {
+      display: linkedIn,
+      url: linkedIn
+    }
+  }
+//-------------------- Primary --------------------//
+//- Experience section
+    If no url exists: remove the "url" option entirely
+-
+  experience = {
+    heading: "Experience",
+    content: {
+      "National Oilwell Varco": {
+        date: "Feb 2017 - present",
+        role: "Software Developer",
+        description: "As part of an agile development team, my duties range from front-end to back-end. Our front-end is written in TypeScript with Angular serving as our UI framework. Our back-end is written in C#, and communicates with MongoDB and PI. My primary contributions consist of developing out new app features, expanding our core components library, and resolving bugs.",
+        url: "https://www.linkedin.com/in/buckymaler/"
+      },
+      "Channels": {
+        date: "Jul 2017 - Jan 2018",
+        role: "Front-End Developer",
+        description: "Channels, is a macOS app built using Electron, React, Redux, and Flow. Channels, accesses data via the YouTube API. As a user you can watch, search, rate, and comment on videos for channels which you are subscribed. Channels, is thoroughly unit tested using, Jest and Enzyme.",
+        url: "https://github.com/BuckyMaler/channels"
+      },
+      "Simply2do": {
+        date: "Nov 2016",
+        role: "Full-Stack Developer",
+        description: "Simply2do, is a task manager. The front-end was built with React and Backbone, and the back-end was written in NodeJS. User and task data is stored in MongoDB. Tasks can be added, removed, and marked as complete. In addition to that, tasks can be filtered by completion status.",
+        url: "https://github.com/BuckyMaler/simply2do"
+      }
+    }
+  }
+//- Education section
+-
+  education = {
+    heading: "Education",
+    content: {
+      "Graduated Southwestern University 2016": "BA in Computer Science"
+    }
+  }
+//- Hobbies section
+-
+  hobbies = {
+    heading: "Hobbies",
+    list: "Fitness, Philosophy, Design, Disc Golf, & above all else... Netflix."
+  }
+//- Skills section
+    Skill svgs must be added/removed directly from index.pug
+-
+  skills = {
+    heading: "Skills",
+    list: "JavaScript, React, Angular, Backbone, jQuery, Electron, Redux, ngrx, Jest, Jasmine, Webpack, Gulp, HTML5, CSS3, Sass, Git, GitHub"
+  }
