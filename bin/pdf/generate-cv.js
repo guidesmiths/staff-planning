@@ -1,3 +1,4 @@
+const fs = require('fs').promises;
 const config = require('../../config');
 const initBamboo = require('../../lib/bamboo');
 const initPdf = require('../../lib/pdf');
@@ -10,6 +11,7 @@ const pdf = initPdf();
     const { employees } = await bamboo.getStaff();
     const { id } = employees.find(({ workEmail }) => workEmail === email);
     const target = await bamboo.getEmployee(id);
-    await pdf.generate();
+    const file = await pdf.generate();
+    await fs.writeFile('cv.pdf', file);
     console.log(target);
 })();
