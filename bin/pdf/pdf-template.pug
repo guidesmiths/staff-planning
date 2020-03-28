@@ -18,10 +18,10 @@ html(lang="en")
       .introduction
         .introduction__wrapper.l-wrapper
           header.header
-            .header__symbol
+            img.profile_picture(src=person.picture alt=person.firstName)
             h1.header__name
-              span= name.first
-              span= name.last
+              span= person.firstName
+              span= person.firstName
           ul.basics
             each val, key in basics
               li.basics__el
