@@ -1,0 +1,26 @@
+# Snyk (https://snyk.io) policy file, patches or ignores known vulnerabilities.
+version: v1.14.1
+ignore: {}
+# patches apply the minimum changes required to fix a vulnerability
+patch:
+  SNYK-JS-LODASH-567746:
+    - airtable > lodash:
+        patched: '2020-05-01T06:54:24.761Z'
+    - harvest-v2 > lodash:
+        patched: '2020-05-01T06:54:24.761Z'
+    - request-promise-native > request-promise-core > lodash:
+        patched: '2020-05-01T06:54:24.761Z'
+    - tea-school > node-sass > lodash:
+        patched: '2020-05-01T06:54:24.761Z'
+    - harvest-v2 > request-promise > request-promise-core > lodash:
+        patched: '2020-05-01T06:54:24.761Z'
+    - tea-school > node-sass > sass-graph > lodash:
+        patched: '2020-05-01T06:54:24.761Z'
+    - tea-school > node-sass > gaze > globule > lodash:
+        patched: '2020-05-01T06:54:24.761Z'
+    - tea-school > pug > pug-code-gen > constantinople > babel-types > lodash:
+        patched: '2020-05-01T06:54:24.761Z'
+    - tea-school > pug > pug-filters > constantinople > babel-types > lodash:
+        patched: '2020-05-01T06:54:24.761Z'
+    - tea-school > pug > pug-code-gen > pug-attrs > constantinople > babel-types > lodash:
+        patched: '2020-05-01T06:54:24.761Z'

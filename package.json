@@ -4,7 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "snyk-protect": "snyk protect",
+    "prepare": "npm run snyk-protect"
   },
   "author": "",
   "license": "ISC",
@@ -21,6 +23,8 @@
     "mongodb": "^3.3.2",
     "request": "^2.88.0",
     "request-promise-native": "^1.0.8",
-    "tea-school": "^1.5.0"
-  }
+    "tea-school": "^1.5.0",
+    "snyk": "^1.316.1"
+  },
+  "snyk": true
 }
