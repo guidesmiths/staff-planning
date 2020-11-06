@@ -9,7 +9,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "airtable": "^0.7.2",
+    "airtable": "^0.10.1",
     "chart.js": "^2.9.3",
     "chartjs-node": "^1.7.1",
     "debug": "^4.1.1",
