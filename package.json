@@ -10,7 +10,7 @@
   "license": "ISC",
   "dependencies": {
     "airtable": "^0.7.2",
-    "chart.js": "^2.9.3",
+    "chart.js": "^2.9.4",
     "chartjs-node": "^1.7.1",
     "debug": "^4.1.1",
     "deepmerge": "^4.0.0",
